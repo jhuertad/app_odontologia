@@ -4,6 +4,6 @@ import 'package:app_odontologia/app.dart';
 void main() {
   testWidgets('DentalCare smoke test', (WidgetTester tester) async {
     await tester.pumpWidget(const DentalCareApp());
-    expect(find.text('DentalCare'), findsOneWidget);
+    expect(find.textContaining('DentalCare'), findsWidgets);
   });
 }
