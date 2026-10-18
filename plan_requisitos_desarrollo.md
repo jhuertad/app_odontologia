@@ -6,15 +6,16 @@ Tras auditar tu sistema (macOS con procesador **Apple Silicon `arm64`**), este e
 
 | Componente | Estado Detectado | Versión / Detalle | Acción Requerida |
 | :--- | :---: | :--- | :--- |
-| **Procesador & Arquitectura** | ✅ Listo | Apple Silicon (`arm64` M1/M2/M3/M4) | Descargar siempre binarios nativos ARM64. |
-| **Gestor de Paquetes** | ✅ Listo | Homebrew 7.0.6 en `/opt/homebrew` | Ninguna, listo para instalar herramientas. |
+| **Procesador & Arquitectura** | ✅ Listo | Apple Silicon (`arm64` M1/M2/M3/M4) | Binarios nativos ARM64 instalados. |
+| **Gestor de Paquetes** | ✅ Listo | Homebrew 7.0.6 en `/opt/homebrew` | Operativo. |
+| **Flutter SDK** | ✅ **Listo** | **Flutter 3.47.7 (Stable) / Dart 3.13.5** | Enlazado en `/opt/homebrew/bin/flutter`. |
+| **CocoaPods** | ✅ **Listo** | **CocoaPods 1.17.0** | Instalado para dependencias iOS/iPad. |
+| **Android Studio** | ✅ **Listo** | **Android Studio (versión 2026.2.1)** | Instalado en `/Applications/Android Studio.app`. |
+| **Editor de Código** | ✅ **Listo** | **Visual Studio Code + Extensiones** | Flutter, Dart y ErrorLens instalados. |
 | **Java JDK** | ✅ Listo | OpenJDK Temurin 25.0.3 LTS | Compatible con Android SDK. |
-| **Editor de Código** | ✅ Listo | Visual Studio Code (`/Applications`) | Instalar extensiones de Flutter y Dart. |
-| **Command Line Tools** | ✅ Listo | `/Library/Developer/CommandLineTools` | Base de compilación C/C++ lista. |
 | **Git & Repositorio** | ✅ Listo | Git 2.54.0 conectado a GitHub | Repositorio activo y sincronizado. |
-| **Flutter SDK** | ❌ **Pendiente** | No encontrado en `$PATH` | **Instalación prioritaria**. |
-| **Android Studio & SDK** | ❌ **Pendiente** | No instalado | **Requerido para Android/Tablet**. |
-| **CocoaPods** | ❌ **Pendiente** | No encontrado | **Requerido para compilar iOS/iPad**. |
+| **Soporte Web / Chrome** | ✅ **Listo** | Chrome Web Engine verificado | `flutter run -d chrome` listo para pruebas. |
+| **Android SDK / Licencias** | ⏳ **Paso Final** | Requiere primer inicio de Android Studio | Abrir Android Studio una vez para descargar SDK. |
 | **Xcode Completo** | ⚠️ Opcional inicial | Solo Command Line Tools | Requerido para simuladores de iPhone/iPad. |
 
 ---
