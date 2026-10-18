@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../../odontogram/presentation/screens/odontogram_screen.dart';
+import '../../../appointments/presentation/screens/appointments_screen.dart';
+import '../../../radiology/presentation/screens/radiology_screen.dart';
+import '../../../consent/presentation/screens/consent_screen.dart';
+import '../../../patients/presentation/screens/patients_screen.dart';
+import '../../../billing_quotes/presentation/screens/billing_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -170,22 +175,40 @@ class DashboardScreen extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: _buildMetricCard(
-                    title: 'Citas Hoy',
-                    value: '8 Pacientes',
-                    badge: '2 en espera',
-                    badgeColor: const Color(0xFF028090),
-                    icon: Icons.calendar_today_rounded,
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AppointmentsScreen()),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(20),
+                    child: _buildMetricCard(
+                      title: 'Citas Hoy',
+                      value: '8 Pacientes',
+                      badge: '2 en espera',
+                      badgeColor: const Color(0xFF028090),
+                      icon: Icons.calendar_today_rounded,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _buildMetricCard(
-                    title: 'Presupuestos',
-                    value: '\$1,420',
-                    badge: '94% aceptado',
-                    badgeColor: const Color(0xFF10B981),
-                    icon: Icons.attach_money_rounded,
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const BillingScreen()),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(20),
+                    child: _buildMetricCard(
+                      title: 'Presupuestos',
+                      value: '\$1,420',
+                      badge: '94% aceptado',
+                      badgeColor: const Color(0xFF10B981),
+                      icon: Icons.attach_money_rounded,
+                    ),
                   ),
                 ),
               ],
@@ -228,7 +251,26 @@ class DashboardScreen extends StatelessWidget {
                   badgeText: 'Hoy 8 turnos',
                   icon: Icons.event_note_rounded,
                   gradient: const [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AppointmentsScreen()),
+                    );
+                  },
+                ),
+                _buildModuleTile(
+                  context,
+                  title: 'Directorio de Pacientes',
+                  subtitle: 'Fichas clínicas, DNI e historias SOAP',
+                  badgeText: 'Historias',
+                  icon: Icons.people_alt_rounded,
+                  gradient: const [Color(0xFF028090), Color(0xFF00A896)],
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const PatientsScreen()),
+                    );
+                  },
                 ),
                 _buildModuleTile(
                   context,
@@ -237,7 +279,12 @@ class DashboardScreen extends StatelessWidget {
                   badgeText: 'Cloudflare R2',
                   icon: Icons.filter_b_and_w_rounded,
                   gradient: const [Color(0xFF6366F1), Color(0xFF4338CA)],
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const RadiologyScreen()),
+                    );
+                  },
                 ),
                 _buildModuleTile(
                   context,
@@ -246,7 +293,26 @@ class DashboardScreen extends StatelessWidget {
                   badgeText: 'Firma Legal',
                   icon: Icons.draw_rounded,
                   gradient: const [Color(0xFF10B981), Color(0xFF047857)],
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ConsentScreen()),
+                    );
+                  },
+                ),
+                _buildModuleTile(
+                  context,
+                  title: 'Presupuestos & Cobros',
+                  subtitle: 'Planes por fases, abonos y saldos',
+                  badgeText: 'Financiero',
+                  icon: Icons.receipt_long_rounded,
+                  gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)],
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const BillingScreen()),
+                    );
+                  },
                 ),
               ],
             ),
