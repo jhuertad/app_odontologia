@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:table_calendar/table_calendar.dart';
 import '../../data/appointments_repository.dart';
 import '../../domain/models/appointment.dart';
 import '../../../patients/data/patients_repository.dart';
@@ -15,6 +16,8 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   final _repository = AppointmentsRepository();
   DateTime _selectedDate = DateTime.now();
   AppointmentStatus? _filterStatus;
+  bool _showFullCalendar = false;
+  CalendarFormat _calendarFormat = CalendarFormat.month;
 
   @override
   Widget build(BuildContext context) {
@@ -30,30 +33,54 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Agenda Clínica & Turnos', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
-            Text('Gestión de citas por sillón dental', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+            Text('Navegación por días, meses, años y sillón dental', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
           ],
         ),
+        actions: [
+          // Botón para alternar vista de calendario mensual completo
+          IconButton.filledTonal(
+            icon: Icon(_showFullCalendar ? Icons.calendar_view_day_rounded : Icons.calendar_month_rounded, size: 20),
+            tooltip: _showFullCalendar ? 'Ocultar Calendario Mensual' : 'Ver Calendario Mensual',
+            onPressed: () {
+              setState(() => _showFullCalendar = !_showFullCalendar);
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: Column(
         children: [
-          // Selector de fecha
+          // 1. Selector rápido de Día, Mes y Año con salto directo
           _buildDateSelector(),
 
-          // Filtros de estado
+          // 2. Calendario Mensual Desplegable (TableCalendar)
+          if (_showFullCalendar) _buildMonthCalendarView(),
+
+          // 3. Filtros de estado
           _buildStatusFilters(allForDate.length),
 
-          // Lista de citas
+          // 4. Lista de citas del día seleccionado
           Expanded(
             child: appointments.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.event_available_rounded, size: 50, color: Colors.grey.shade400),
+                        Icon(Icons.event_available_rounded, size: 48, color: Colors.grey.shade400),
                         const SizedBox(height: 12),
                         Text(
-                          'No hay citas para esta fecha con el filtro seleccionado.',
-                          style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                          'No hay citas programadas para el ${DateFormat('d MMMM yyyy').format(_selectedDate)}.',
+                          style: TextStyle(color: Colors.grey.shade600, fontSize: 13, fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 14),
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            side: const BorderSide(color: Color(0xFF00A896)),
+                          ),
+                          icon: const Icon(Icons.add, color: Color(0xFF00A896), size: 18),
+                          label: const Text('Programar Cita en esta fecha', style: TextStyle(color: Color(0xFF00A896), fontWeight: FontWeight.bold)),
+                          onPressed: _showNewAppointmentDialog,
                         ),
                       ],
                     ),
@@ -81,39 +108,192 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     final dateFormat = DateFormat('EEEE, d MMMM yyyy');
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      color: Colors.white,
-      child: Row(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+      ),
+      child: Column(
         children: [
-          IconButton.filledTonal(
-            icon: const Icon(Icons.chevron_left_rounded),
-            onPressed: () {
-              setState(() => _selectedDate = _selectedDate.subtract(const Duration(days: 1)));
-            },
-          ),
-          Expanded(
-            child: Text(
-              dateFormat.format(_selectedDate),
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFF0F172A)),
-            ),
-          ),
-          IconButton.filledTonal(
-            icon: const Icon(Icons.chevron_right_rounded),
-            onPressed: () {
-              setState(() => _selectedDate = _selectedDate.add(const Duration(days: 1)));
-            },
-          ),
-          const SizedBox(width: 8),
-          ActionChip(
-            label: const Text('Hoy', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 11)),
-            onPressed: () {
-              setState(() => _selectedDate = DateTime.now());
-            },
+          Row(
+            children: [
+              // Mes anterior
+              IconButton(
+                icon: const Icon(Icons.keyboard_double_arrow_left_rounded, size: 20),
+                tooltip: 'Mes Anterior',
+                onPressed: () {
+                  setState(() {
+                    _selectedDate = DateTime(_selectedDate.year, _selectedDate.month - 1, _selectedDate.day);
+                  });
+                },
+              ),
+              // Día anterior
+              IconButton(
+                icon: const Icon(Icons.chevron_left_rounded, size: 22),
+                tooltip: 'Día Anterior',
+                onPressed: () {
+                  setState(() {
+                    _selectedDate = _selectedDate.subtract(const Duration(days: 1));
+                  });
+                },
+              ),
+
+              // Píldora interactiva para abrir selector de Año / Mes / Día
+              Expanded(
+                child: InkWell(
+                  onTap: _pickDateFromPicker,
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.calendar_today_rounded, size: 15, color: Color(0xFF00A896)),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            dateFormat.format(_selectedDate),
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Color(0xFF0F172A)),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.arrow_drop_down_rounded, size: 20, color: Color(0xFF64748B)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // Día siguiente
+              IconButton(
+                icon: const Icon(Icons.chevron_right_rounded, size: 22),
+                tooltip: 'Día Siguiente',
+                onPressed: () {
+                  setState(() {
+                    _selectedDate = _selectedDate.add(const Duration(days: 1));
+                  });
+                },
+              ),
+              // Mes siguiente
+              IconButton(
+                icon: const Icon(Icons.keyboard_double_arrow_right_rounded, size: 20),
+                tooltip: 'Mes Siguiente',
+                onPressed: () {
+                  setState(() {
+                    _selectedDate = DateTime(_selectedDate.year, _selectedDate.month + 1, _selectedDate.day);
+                  });
+                },
+              ),
+
+              // Botón Hoy
+              ActionChip(
+                label: const Text('Hoy', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11)),
+                onPressed: () {
+                  setState(() => _selectedDate = DateTime.now());
+                },
+              ),
+            ],
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildMonthCalendarView() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: TableCalendar(
+        firstDay: DateTime(2020, 1, 1),
+        lastDay: DateTime(2035, 12, 31),
+        focusedDay: _selectedDate,
+        calendarFormat: _calendarFormat,
+        selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
+        onDaySelected: (selectedDay, focusedDay) {
+          setState(() {
+            _selectedDate = selectedDay;
+          });
+        },
+        onFormatChanged: (format) {
+          setState(() {
+            _calendarFormat = format;
+          });
+        },
+        headerStyle: HeaderStyle(
+          formatButtonVisible: true,
+          titleCentered: true,
+          formatButtonShowsNext: false,
+          formatButtonDecoration: BoxDecoration(
+            color: const Color(0xFF00A896).withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          formatButtonTextStyle: const TextStyle(color: Color(0xFF00A896), fontSize: 11, fontWeight: FontWeight.bold),
+          titleTextStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF0F172A)),
+        ),
+        calendarStyle: const CalendarStyle(
+          todayDecoration: BoxDecoration(
+            color: Color(0xFF028090),
+            shape: BoxShape.circle,
+          ),
+          selectedDecoration: BoxDecoration(
+            color: Color(0xFF00A896),
+            shape: BoxShape.circle,
+          ),
+          selectedTextStyle: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          todayTextStyle: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickDateFromPicker() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020, 1, 1),
+      lastDate: DateTime(2035, 12, 31),
+      initialDatePickerMode: DatePickerMode.day,
+      helpText: 'SELECCIONAR FECHA DE LA AGENDA',
+      cancelText: 'CANCELAR',
+      confirmText: 'SELECCIONAR',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF00A896),
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Color(0xFF0F172A),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
   }
 
   Widget _buildStatusFilters(int totalCount) {
