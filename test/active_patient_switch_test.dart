@@ -1,11 +1,10 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:app_odontologia/app.dart';
 import 'package:app_odontologia/features/appointments/data/appointments_repository.dart';
 import 'package:app_odontologia/features/appointments/domain/models/appointment.dart';
 
 void main() {
-  testWidgets('Dashboard dynamically updates active patient when switched to inTreatment', (WidgetTester tester) async {
+  testWidgets('Dashboard and Odontogram dynamically update to active patient', (WidgetTester tester) async {
     final repo = AppointmentsRepository();
 
     // 1. Pump the app
@@ -21,7 +20,7 @@ void main() {
     repo.updateAppointmentStatus('apt-5', AppointmentStatus.inTreatment);
     await tester.pumpAndSettle();
 
-    // 4. Verification: Lucía Benavides Rios is now active in Sillón 1
+    // 4. Verification in Dashboard: Lucía Benavides Rios is now active in Sillón 1
     expect(find.text('Lucía Benavides Rios'), findsOneWidget);
     expect(find.text('EN ATENCIÓN • SILLÓN 1'), findsOneWidget);
     expect(find.text('Abrir Odontograma de Lucía'), findsOneWidget);
@@ -31,7 +30,15 @@ void main() {
     await tester.tap(find.text('Abrir Odontograma de Lucía'));
     await tester.pumpAndSettle();
 
-    // 6. Odontogram screen should display Lucía Benavides Rios in the header
+    // 6. Odontogram screen should display Lucía Benavides Rios in both header and patient card!
     expect(find.text('Odontograma: Lucía Benavides Rios'), findsOneWidget);
+    expect(find.text('Lucía Benavides Rios'), findsOneWidget);
+    // Camila should NOT be on the patient banner of Lucía's odontogram
+    expect(find.text('Camila Ramos Vega'), findsNothing);
+    // Initials should be LB
+    expect(find.text('LB'), findsOneWidget);
+    // Allergy for Lucía is Sulfas
+    expect(find.text('Alergia: Sulfas'), findsOneWidget);
   });
 }
+

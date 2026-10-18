@@ -188,7 +188,12 @@ class _PatientsScreenState extends State<PatientsScreen> {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const OdontogramScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => OdontogramScreen(
+                          patientId: p.id,
+                          patientName: p.fullName,
+                        ),
+                      ),
                     );
                   },
                 ),

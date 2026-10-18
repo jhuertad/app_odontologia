@@ -61,6 +61,18 @@ class PatientsRepository {
         medicalHistory: {'diabetes': true},
         activeTreatment: 'Implante Dental en pieza 24',
       ),
+      Patient(
+        id: 'p-5',
+        firstName: 'Lucía',
+        lastName: 'Benavides Rios',
+        documentId: '43920188',
+        phoneWhatsapp: '+51 977 112 334',
+        email: 'lucia.benavides@email.com',
+        birthDate: DateTime(1993, 8, 12),
+        criticalAllergies: ['Sulfas'],
+        medicalHistory: {'hipertension': false, 'diabetes': false},
+        activeTreatment: 'Profilaxis Dental Ultrasónica y Fluorización',
+      ),
     ]);
   }
 
@@ -69,6 +81,15 @@ class PatientsRepository {
   Patient? getPatientById(String id) {
     try {
       return _patients.firstWhere((p) => p.id == id);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Patient? getPatientByName(String name) {
+    try {
+      final q = name.toLowerCase().trim();
+      return _patients.firstWhere((p) => p.fullName.toLowerCase().contains(q) || q.contains(p.fullName.toLowerCase()));
     } catch (_) {
       return null;
     }

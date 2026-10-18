@@ -184,6 +184,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           context,
                           MaterialPageRoute(
                             builder: (context) => OdontogramScreen(
+                              patientId: activeApt?.patientId,
                               patientName: activeApt?.patientName,
                             ),
                           ),
@@ -437,6 +438,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     context,
                     MaterialPageRoute(
                       builder: (context) => OdontogramScreen(
+                        patientId: activeApt.patientId,
                         patientName: activeApt.patientName,
                       ),
                     ),

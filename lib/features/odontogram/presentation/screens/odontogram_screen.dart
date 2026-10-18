@@ -3,16 +3,30 @@ import '../../../../core/constants/fdi_constants.dart';
 import '../../domain/models/tooth.dart';
 import '../widgets/tooth_widget.dart';
 import '../widgets/treatment_palette.dart';
+import '../../../patients/domain/models/patient.dart';
+import '../../../patients/data/patients_repository.dart';
+import '../../../appointments/data/appointments_repository.dart';
+import '../../data/odontogram_repository.dart';
 
 class OdontogramScreen extends StatefulWidget {
+  final String? patientId;
   final String? patientName;
-  const OdontogramScreen({super.key, this.patientName});
+  const OdontogramScreen({
+    super.key,
+    this.patientId,
+    this.patientName,
+  });
 
   @override
   State<OdontogramScreen> createState() => _OdontogramScreenState();
 }
 
 class _OdontogramScreenState extends State<OdontogramScreen> {
+  final PatientsRepository _patientsRepo = PatientsRepository();
+  final OdontogramRepository _odontogramRepo = OdontogramRepository();
+  final AppointmentsRepository _appointmentsRepo = AppointmentsRepository();
+
+  late Patient _currentPatient;
   bool _isAdultDentition = true;
   ToothCondition _activeCondition = ToothCondition.cavity;
   final Map<int, Tooth> _teeth = {};
@@ -20,27 +34,36 @@ class _OdontogramScreenState extends State<OdontogramScreen> {
   @override
   void initState() {
     super.initState();
-    _initializeTeeth();
+    _resolveCurrentPatient();
   }
 
-  void _initializeTeeth() {
-    for (final fdiNum in [
-      ...FdiConstants.adultQuadrant1,
-      ...FdiConstants.adultQuadrant2,
-      ...FdiConstants.adultQuadrant4,
-      ...FdiConstants.adultQuadrant3,
-    ]) {
-      _teeth[fdiNum] = Tooth(fdiNumber: fdiNum, isDeciduous: false);
+  void _resolveCurrentPatient() {
+    Patient? p;
+    if (widget.patientId != null) {
+      p = _patientsRepo.getPatientById(widget.patientId!);
     }
+    if (p == null && widget.patientName != null) {
+      p = _patientsRepo.getPatientByName(widget.patientName!);
+    }
+    if (p == null) {
+      final activeApt = _appointmentsRepo.getActiveAppointment();
+      if (activeApt != null) {
+        p = _patientsRepo.getPatientById(activeApt.patientId) ??
+            _patientsRepo.getPatientByName(activeApt.patientName);
+      }
+    }
+    _currentPatient = p ?? _patientsRepo.getAllPatients().first;
+    _loadTeethForCurrentPatient();
+  }
 
-    for (final fdiNum in [
-      ...FdiConstants.childQuadrant5,
-      ...FdiConstants.childQuadrant6,
-      ...FdiConstants.childQuadrant8,
-      ...FdiConstants.childQuadrant7,
-    ]) {
-      _teeth[fdiNum] = Tooth(fdiNumber: fdiNum, isDeciduous: true);
-    }
+  void _loadTeethForCurrentPatient() {
+    final loaded = _odontogramRepo.getTeethForPatient(_currentPatient.id);
+    _teeth.clear();
+    _teeth.addAll(loaded);
+    final age = _currentPatient.birthDate != null
+        ? (DateTime.now().year - _currentPatient.birthDate!.year)
+        : 28;
+    _isAdultDentition = age >= 12;
   }
 
   void _onSurfaceTapped(int fdiNumber, String surface) {
@@ -252,18 +275,21 @@ class _OdontogramScreenState extends State<OdontogramScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              widget.patientName != null ? 'Odontograma: ${widget.patientName}' : 'Odontograma Clínico Inteligente',
+              'Odontograma: ${_currentPatient.fullName}',
               style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
             ),
-            const Text('Nomenclatura Internacional FDI ISO 3950', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+            Text(
+              'Nomenclatura FDI ISO 3950 • DNI ${_currentPatient.documentId}',
+              style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+            ),
           ],
         ),
         actions: [
           IconButton.filledTonal(
             icon: const Icon(Icons.refresh_rounded, size: 20),
-            tooltip: 'Reiniciar',
+            tooltip: 'Recargar Gráfico',
             onPressed: () {
-              setState(() => _initializeTeeth());
+              setState(() => _loadTeethForCurrentPatient());
             },
           ),
           const SizedBox(width: 6),
@@ -275,12 +301,13 @@ class _OdontogramScreenState extends State<OdontogramScreen> {
             icon: const Icon(Icons.check_rounded, size: 18),
             label: const Text('Guardar'),
             onPressed: () {
+              _odontogramRepo.saveTeethForPatient(_currentPatient.id, _teeth);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   backgroundColor: const Color(0xFF0F172A),
-                  content: Text('Odontograma guardado: ${_affectedTeeth.length} piezas registradas.'),
+                  content: Text('Odontograma de ${_currentPatient.fullName} guardado (${_affectedTeeth.length} piezas registradas).'),
                 ),
               );
             },
@@ -347,6 +374,15 @@ class _OdontogramScreenState extends State<OdontogramScreen> {
   }
 
   Widget _buildPatientCard() {
+    final initials = '${_currentPatient.firstName[0]}${_currentPatient.lastName[0]}';
+    final age = _currentPatient.birthDate != null
+        ? (DateTime.now().year - _currentPatient.birthDate!.year)
+        : 28;
+    final todayApts = _appointmentsRepo.getAppointmentsForDate(DateTime.now());
+    final apt = todayApts.where((a) => a.patientId == _currentPatient.id || a.patientName == _currentPatient.fullName).firstOrNull;
+    final chairInfo = apt != null ? 'Sillón ${apt.chairNumber}' : 'Consulta Externa';
+    final hasAllergies = _currentPatient.criticalAllergies.isNotEmpty;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -372,63 +408,124 @@ class _OdontogramScreenState extends State<OdontogramScreen> {
               ),
               shape: BoxShape.circle,
             ),
-            child: const Center(
+            child: Center(
               child: Text(
-                'CR',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
+                initials,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
               ),
             ),
           ),
           const SizedBox(width: 14),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Text(
-                      'Camila Ramos Vega',
-                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF0F172A)),
+                    Flexible(
+                      child: Text(
+                        _currentPatient.fullName,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF0F172A)),
+                      ),
                     ),
-                    SizedBox(width: 8),
+                    const SizedBox(width: 8),
                     Text(
-                      '#HC-2049',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                      '#HC-${_currentPatient.documentId.length >= 4 ? _currentPatient.documentId.substring(0, 4) : _currentPatient.documentId}',
+                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
-                  '28 años • Plan Dental Integral • Sillón 1',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                  '$age años • ${_currentPatient.activeTreatment ?? "Plan Integral"} • $chairInfo',
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                 ),
               ],
             ),
           ),
-          // Badge de Alergia Crítica (Stitch Alert Badge)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFF4D6D).withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFFF4D6D).withValues(alpha: 0.3)),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.warning_amber_rounded, color: Color(0xFFE63946), size: 16),
-                SizedBox(width: 5),
-                Text(
-                  'Alergia: Penicilina',
-                  style: TextStyle(
-                    color: Color(0xFFC9184A),
-                    fontWeight: FontWeight.w800,
-                    fontSize: 11,
+          // Selector rápido de paciente
+          PopupMenuButton<Patient>(
+            tooltip: 'Cambiar de Paciente',
+            icon: const Icon(Icons.swap_horiz_rounded, color: Color(0xFF00A896)),
+            onSelected: (selected) {
+              setState(() {
+                _currentPatient = selected;
+                _loadTeethForCurrentPatient();
+              });
+            },
+            itemBuilder: (ctx) {
+              return _patientsRepo.getAllPatients().map((p) {
+                return PopupMenuItem<Patient>(
+                  value: p,
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 12,
+                        backgroundColor: const Color(0xFF00A896),
+                        child: Text(
+                          '${p.firstName[0]}${p.lastName[0]}',
+                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(p.fullName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                    ],
                   ),
-                ),
-              ],
-            ),
+                );
+              }).toList();
+            },
           ),
+          const SizedBox(width: 4),
+          // Badge de Alergia Crítica
+          if (hasAllergies)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF4D6D).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFF4D6D).withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.warning_amber_rounded, color: Color(0xFFE63946), size: 16),
+                  const SizedBox(width: 5),
+                  Text(
+                    'Alergia: ${_currentPatient.criticalAllergies.join(", ")}',
+                    style: const TextStyle(
+                      color: Color(0xFFC9184A),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle_outline_rounded, color: Color(0xFF10B981), size: 16),
+                  SizedBox(width: 5),
+                  Text(
+                    'Sin alergias',
+                    style: TextStyle(
+                      color: Color(0xFF059669),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
