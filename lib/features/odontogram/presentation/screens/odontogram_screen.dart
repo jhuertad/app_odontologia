@@ -5,7 +5,8 @@ import '../widgets/tooth_widget.dart';
 import '../widgets/treatment_palette.dart';
 
 class OdontogramScreen extends StatefulWidget {
-  const OdontogramScreen({super.key});
+  final String? patientName;
+  const OdontogramScreen({super.key, this.patientName});
 
   @override
   State<OdontogramScreen> createState() => _OdontogramScreenState();
@@ -247,11 +248,14 @@ class _OdontogramScreenState extends State<OdontogramScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Column(
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Odontograma Clínico Inteligente', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
-            Text('Nomenclatura Internacional FDI ISO 3950', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+            Text(
+              widget.patientName != null ? 'Odontograma: ${widget.patientName}' : 'Odontograma Clínico Inteligente',
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+            ),
+            const Text('Nomenclatura Internacional FDI ISO 3950', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
           ],
         ),
         actions: [

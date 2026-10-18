@@ -1,6 +1,7 @@
+import 'package:flutter/foundation.dart';
 import '../domain/models/appointment.dart';
 
-class AppointmentsRepository {
+class AppointmentsRepository extends ChangeNotifier {
   static final AppointmentsRepository _instance = AppointmentsRepository._internal();
   factory AppointmentsRepository() => _instance;
   AppointmentsRepository._internal() {
@@ -8,6 +9,7 @@ class AppointmentsRepository {
   }
 
   final List<Appointment> _appointments = [];
+  String? _lastActiveAppointmentId;
 
   void _initSampleData() {
     if (_appointments.isNotEmpty) return;
@@ -89,11 +91,77 @@ class AppointmentsRepository {
   void updateAppointmentStatus(String id, AppointmentStatus newStatus) {
     final idx = _appointments.indexWhere((a) => a.id == id);
     if (idx != -1) {
-      _appointments[idx] = _appointments[idx].copyWith(status: newStatus);
+      final targetApt = _appointments[idx];
+
+      // Si el paciente entra en atención:
+      if (newStatus == AppointmentStatus.inTreatment) {
+        _lastActiveAppointmentId = id;
+        // Un sillón solo puede tener 1 paciente simultáneo en atención.
+        // Si había otro paciente en atención en ese mismo sillón, se marca como completado.
+        for (int i = 0; i < _appointments.length; i++) {
+          if (_appointments[i].id != id &&
+              _appointments[i].chairNumber == targetApt.chairNumber &&
+              _appointments[i].status == AppointmentStatus.inTreatment) {
+            _appointments[i] = _appointments[i].copyWith(status: AppointmentStatus.completed);
+          }
+        }
+      }
+
+      _appointments[idx] = targetApt.copyWith(status: newStatus);
+      notifyListeners();
     }
   }
 
   void addAppointment(Appointment appointment) {
     _appointments.add(appointment);
+    notifyListeners();
+  }
+
+  Appointment? getActiveAppointment({int? preferredChair}) {
+    final todayAppointments = getAppointmentsForDate(DateTime.now());
+    if (todayAppointments.isEmpty) return null;
+
+    // Si se especificó un sillón preferido:
+    if (preferredChair != null) {
+      final chairApts = todayAppointments.where((a) => a.chairNumber == preferredChair).toList();
+      final inChair = chairApts.where((a) => a.status == AppointmentStatus.inTreatment).firstOrNull;
+      if (inChair != null) return inChair;
+      final waitingChair = chairApts.where((a) => a.status == AppointmentStatus.inWaitingRoom).firstOrNull;
+      if (waitingChair != null) return waitingChair;
+      if (chairApts.isNotEmpty) return chairApts.first;
+    }
+
+    // 1. Si hay una cita activada explícitamente y sigue en atención:
+    if (_lastActiveAppointmentId != null) {
+      final match = todayAppointments.where((a) => a.id == _lastActiveAppointmentId).firstOrNull;
+      if (match != null && match.status == AppointmentStatus.inTreatment) {
+        return match;
+      }
+    }
+
+    // 2. Cualquier cita en atención:
+    final inTreatment = todayAppointments.where((a) => a.status == AppointmentStatus.inTreatment).toList();
+    if (inTreatment.isNotEmpty) return inTreatment.first;
+
+    // 3. Cualquier cita en sala de espera:
+    final inWaiting = todayAppointments.where((a) => a.status == AppointmentStatus.inWaitingRoom).toList();
+    if (inWaiting.isNotEmpty) return inWaiting.first;
+
+    // 4. Próximas confirmadas o agendadas:
+    final upcoming = todayAppointments.where((a) => a.status == AppointmentStatus.confirmed || a.status == AppointmentStatus.scheduled).toList();
+    if (upcoming.isNotEmpty) return upcoming.first;
+
+    return todayAppointments.first;
+  }
+
+  Appointment? getAppointmentForChair(int chairNumber) {
+    final todayAppointments = getAppointmentsForDate(DateTime.now());
+    final chairApts = todayAppointments.where((a) => a.chairNumber == chairNumber).toList();
+    final inTreatment = chairApts.where((a) => a.status == AppointmentStatus.inTreatment).firstOrNull;
+    if (inTreatment != null) return inTreatment;
+    final inWaiting = chairApts.where((a) => a.status == AppointmentStatus.inWaitingRoom).firstOrNull;
+    if (inWaiting != null) return inWaiting;
+    return chairApts.firstOrNull;
   }
 }
+
