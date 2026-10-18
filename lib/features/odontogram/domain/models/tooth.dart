@@ -27,6 +27,16 @@ class Tooth {
     this.notes,
   });
 
+  bool get isMissing => generalCondition == ToothCondition.missing;
+  bool get hasCrown => generalCondition == ToothCondition.crown;
+  bool get hasEndodontic => generalCondition == ToothCondition.endodontic;
+  bool get hasImplant => generalCondition == ToothCondition.implant;
+
+  bool get hasAnyCondition {
+    if (generalCondition != ToothCondition.healthy) return true;
+    return surfaces.values.any((c) => c != ToothCondition.healthy);
+  }
+
   Tooth copyWith({
     int? fdiNumber,
     bool? isDeciduous,

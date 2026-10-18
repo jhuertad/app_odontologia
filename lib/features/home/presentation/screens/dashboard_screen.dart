@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../odontogram/presentation/screens/odontogram_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -125,7 +126,12 @@ class DashboardScreen extends StatelessWidget {
                   subtitle: 'Canvas FDI 32/20 piezas',
                   icon: Icons.grid_view_rounded,
                   color: AppColors.primary,
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const OdontogramScreen()),
+                    );
+                  },
                 ),
                 _buildQuickCard(
                   context,
